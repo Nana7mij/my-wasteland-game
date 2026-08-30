@@ -221,38 +221,63 @@
               </div>
             </div>
 
-            <!-- 武器槽位 -->
-            <div
-              class="bg-gray-900/60 p-3 rounded-lg border border-gray-700/60 flex items-center justify-between"
-            >
-              <div class="flex items-center space-x-3">
-                <div
-                  class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-gray-700"
-                >
-                  {{ gameData.equipment.weapon ? gameData.equipment.weapon.icon
-                  : '⚔️' }}
-                </div>
-                <div>
-                  <div class="text-xs text-gray-400">武器</div>
-                  <div class="text-sm font-bold text-gray-200">
-                    {{ gameData.equipment.weapon ?
-                    gameData.equipment.weapon.name : '未装备' }}
-                  </div>
-                  <div
-                    v-if="gameData.equipment.weapon"
-                    class="text-[10px] text-amber-400 font-semibold"
-                  >
-                    战力 +{{ gameData.equipment.weapon.power }}
-                  </div>
-                </div>
-              </div>
-              <button
-                v-if="gameData.equipment.weapon"
-                @click="unequipItem('weapon')"
-                class="bg-gray-700 hover:bg-red-600/80 text-xs px-2.5 py-1 rounded transition text-gray-200"
+            <!-- 5大装备槽位循环展示 -->
+            <div class="space-y-2">
+              <div
+                v-for="(slotNameText, slotKey) in { head: '头部', armor: '护甲', hand: '手部', leg: '腿部', ring: '戒指' }"
+                :key="slotKey"
+                class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-700/60 flex items-center justify-between"
               >
-                脱下
-              </button>
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-700"
+                  >
+                    {{ gameData.equipment[slotKey] ?
+                    gameData.equipment[slotKey].icon : (slotKey === 'head' ?
+                    '🪖' : slotKey === 'armor' ? '🛡️' : slotKey === 'hand' ?
+                    '🥊' : slotKey === 'leg' ? '🦿' : '💍') }}
+                  </div>
+                  <div>
+                    <div class="text-[10px] text-gray-400">
+                      {{ slotNameText }}
+                    </div>
+                    <div class="text-xs font-bold text-gray-200">
+                      {{ gameData.equipment[slotKey] ?
+                      gameData.equipment[slotKey].name : '未装备' }}
+                    </div>
+                    <div
+                      v-if="gameData.equipment[slotKey]"
+                      class="text-[9px] text-amber-400 font-semibold"
+                    >
+                      战力 +{{ gameData.equipment[slotKey].power }} | {{
+                      gameData.equipment[slotKey].setName === 'wasteland' ?
+                      '废土套' : gameData.equipment[slotKey].setName ===
+                      'powerArmor' ? '动力套' : '黑客套' }}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  v-if="gameData.equipment[slotKey]"
+                  @click="unequipItem(slotKey)"
+                  class="bg-gray-700 hover:bg-red-600/80 text-[10px] px-2 py-1 rounded transition text-gray-200"
+                >
+                  脱下
+                </button>
+              </div>
+            </div>
+
+            <!-- 套装激活状态提示 -->
+            <div
+              v-if="activeSetNames.length > 0"
+              class="bg-amber-500/10 border border-amber-500/40 p-2.5 rounded-lg text-xs text-amber-300"
+            >
+              ✨ **已激活套装效果**：
+              <span
+                v-for="sName in activeSetNames"
+                :key="sName"
+                class="block font-bold mt-0.5"
+                >🔥 {{ sName }} (4件套额外战力加成已生效)</span
+              >
             </div>
 
             <!-- 防具槽位 -->
@@ -636,20 +661,78 @@
               crates: [],
               maxCrates: 5,
               inventory: [],
-              equipment: { weapon: null, armor: null },
+              equipment: {
+                head: null,
+                armor: null,
+                hand: null,
+                leg: null,
+                ring: null,
+              },
               isVip: false,
             },
           };
         },
         computed: {
           totalPower() {
-            let p = 10;
-            if (this.gameData.equipment.weapon)
-              p += this.gameData.equipment.weapon.power;
-            if (this.gameData.equipment.armor)
-              p += this.gameData.equipment.armor.power;
+            let p = 10; // 基础战力
+            const eq = this.gameData.equipment;
+            const equippedItems = [
+              eq.head,
+              eq.armor,
+              eq.hand,
+              eq.leg,
+              eq.ring,
+            ].filter(Boolean);
+
+            // 累加各部位战力
+            equippedItems.forEach((item) => {
+              p += item.power || 0;
+            });
+
+            // 检查套装效果 (4件套)
+            const setCounts = {};
+            equippedItems.forEach((item) => {
+              if (item.setName) {
+                setCounts[item.setName] = (setCounts[item.setName] || 0) + 1;
+              }
+            });
+
+            // 看看哪个套装达到了 4 件以上
+            for (const [setName, count] of Object.entries(setCounts)) {
+              if (count >= 4 && SETS_DATABASE[setName]) {
+                p += SETS_DATABASE[setName].bonusPower;
+              }
+            }
+
             return p;
           },
+
+          // 额外写一个计算当前激活了什么套装的属性，用来在界面上展示炫酷提示
+          activeSetNames() {
+            const eq = this.gameData.equipment;
+            const equippedItems = [
+              eq.head,
+              eq.armor,
+              eq.hand,
+              eq.leg,
+              eq.ring,
+            ].filter(Boolean);
+            const setCounts = {};
+            equippedItems.forEach((item) => {
+              if (item.setName) {
+                setCounts[item.setName] = (setCounts[item.setName] || 0) + 1;
+              }
+            });
+
+            let activeSets = [];
+            for (const [setName, count] of Object.entries(setCounts)) {
+              if (count >= 4 && SETS_DATABASE[setName]) {
+                activeSets.push(SETS_DATABASE[setName].name);
+              }
+            }
+            return activeSets;
+          },
+
           exploreStatusText() {
             return this.isExploring
               ? "小队正在废土中搜寻资源..."
@@ -1014,7 +1097,7 @@
             );
             if (index === -1) return;
 
-            const targetType = item.type;
+            const targetType = item.type; // 自动对应 head, armor, hand, leg, ring 中的一个
             const currentEquipped = this.gameData.equipment[targetType];
 
             this.gameData.inventory.splice(index, 1);
@@ -1026,7 +1109,9 @@
             this.gameData.equipment[targetType] = item;
             this.saveUserData();
           },
+
           unequipItem(type) {
+            // 传入对应的槽位key，比如 'head', 'ring' 等
             const itemToUnequip = this.gameData.equipment[type];
             if (!itemToUnequip) return;
 
