@@ -1,46 +1,41 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
 
-const db = new Database(path.join(__dirname, 'game.db'));
+const pool = new Pool({
+    connectionString: 'postgresql://postgres:Jjh85779078@db.zujpmqardtdsxnfnflqc.supabase.co:5432/postgres',
+    ssl: { rejectUnauthorized: false }
+});
 
-function initDb() {
-    // 建立用户表
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+// 兼容 better-sqlite3 风格的胶水层
+const db = {
+    prepare(sql) {
+        let paramIndex = 1;
+        const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
 
-    // 建立游戏存档表
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS game_saves (
-            user_id INTEGER PRIMARY KEY,
-            caps INTEGER DEFAULT 100,
-            level INTEGER DEFAULT 1,
-            exp INTEGER DEFAULT 0,
-            max_crates INTEGER DEFAULT 5,
-            is_vip INTEGER DEFAULT 0,
-            crates TEXT DEFAULT '[]',
-            inventory TEXT DEFAULT '[]',
-            equipment TEXT DEFAULT '{"weapon":null,"armor":null}',
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    `);
+        return {
+            async get(...params) {
+                const client = await pool.connect();
+                try {
+                    const result = await client.query(pgSql, params);
+                    return result.rows[0];
+                } finally {
+                    client.release();
+                }
+            },
+            async run(...params) {
+                const client = await pool.connect();
+                try {
+                    const result = await client.query(pgSql, params);
+                    return {
+                        lastInsertRowid: result.rows[0]?.id || result.rows[0]?.user_id || null,
+                        rowCount: result.rowCount
+                    };
+                } finally {
+                    client.release();
+                }
+            }
+        };
+    }
+};
 
-    // 兼容已有数据库：补充 level 与 exp 字段
-    try {
-        db.exec(`ALTER TABLE game_saves ADD COLUMN level INTEGER DEFAULT 1;`);
-    } catch (e) {}
-    try {
-        db.exec(`ALTER TABLE game_saves ADD COLUMN exp INTEGER DEFAULT 0;`);
-    } catch (e) {}
-
-    console.log('✅ SQLite 数据库初始化成功！');
-}
-
-initDb();
+console.log('✅ Supabase 连接池配置成功！');
 module.exports = db;
