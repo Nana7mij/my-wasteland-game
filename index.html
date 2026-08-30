@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css" />
-    <!-- 修改网页标题左侧的 Emoji 标签页图标 (现代浏览器支持直接用 emoji 作为 favicon) -->
     <link rel="icon" href="./favicon.ico" />
   </head>
   <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
@@ -85,26 +84,6 @@
 
       <!-- 2. 已登录状态 -->
       <div v-else class="space-y-4">
-        <div class="text-right">
-          <div class="text-xs text-gray-400">
-            用户:
-            <span class="text-amber-400 font-bold">{{ currentUser }}</span>
-          </div>
-          <div class="space-x-2">
-            <button
-              @click="showPasswordModal = true"
-              class="text-[10px] text-amber-400 hover:underline"
-            >
-              修改密码
-            </button>
-            <button
-              @click="logout"
-              class="text-[10px] text-red-400 hover:underline"
-            >
-              退出登录
-            </button>
-          </div>
-        </div>
         <!-- 顶部状态栏 -->
         <header
           class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3"
@@ -126,12 +105,20 @@
                     >{{ currentUser }}</span
                   >
                 </div>
-                <button
-                  @click="logout"
-                  class="text-[10px] text-red-400 hover:underline"
-                >
-                  退出登录
-                </button>
+                <div class="space-x-2">
+                  <button
+                    @click="showPasswordModal = true"
+                    class="text-[10px] text-amber-400 hover:underline"
+                  >
+                    修改密码
+                  </button>
+                  <button
+                    @click="logout"
+                    class="text-[10px] text-red-400 hover:underline"
+                  >
+                    退出登录
+                  </button>
+                </div>
               </div>
               <div class="text-right">
                 <div class="text-xs text-gray-400">瓶盖 (金币)</div>
@@ -221,10 +208,10 @@
               </div>
             </div>
 
-            <!-- 5大装备槽位循环展示 -->
+            <!-- 6大装备槽位循环展示 (新增 weapon 武器槽) -->
             <div class="space-y-2">
               <div
-                v-for="(slotNameText, slotKey) in { head: '头部', armor: '护甲', hand: '手部', leg: '腿部', ring: '戒指' }"
+                v-for="(slotNameText, slotKey) in { weapon: '武器', head: '头部', armor: '护甲', hand: '手部', leg: '腿部', ring: '戒指' }"
                 :key="slotKey"
                 class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-700/60 flex items-center justify-between"
               >
@@ -233,9 +220,10 @@
                     class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-700"
                   >
                     {{ gameData.equipment[slotKey] ?
-                    gameData.equipment[slotKey].icon : (slotKey === 'head' ?
-                    '🪖' : slotKey === 'armor' ? '🛡️' : slotKey === 'hand' ?
-                    '🥊' : slotKey === 'leg' ? '🦿' : '💍') }}
+                    gameData.equipment[slotKey].icon : (slotKey === 'weapon' ?
+                    '⚔️' : slotKey === 'head' ? '🪖' : slotKey === 'armor' ?
+                    '🛡️' : slotKey === 'hand' ? '🥊' : slotKey === 'leg' ? '🦿'
+                    : '💍') }}
                   </div>
                   <div>
                     <div class="text-[10px] text-gray-400">
@@ -249,10 +237,13 @@
                       v-if="gameData.equipment[slotKey]"
                       class="text-[9px] text-amber-400 font-semibold"
                     >
-                      战力 +{{ gameData.equipment[slotKey].power }} | {{
-                      gameData.equipment[slotKey].setName === 'wasteland' ?
-                      '废土套' : gameData.equipment[slotKey].setName ===
-                      'powerArmor' ? '动力套' : '黑客套' }}
+                      战力 +{{ gameData.equipment[slotKey].power }}
+                      <span v-if="gameData.equipment[slotKey].setName">
+                        | {{ gameData.equipment[slotKey].setName === 'wasteland'
+                        ? '废土套' : gameData.equipment[slotKey].setName ===
+                        'powerArmor' ? '动力套' : '黑客套' }}
+                      </span>
+                      <span v-else class="text-gray-400"> | 独立武器</span>
                     </div>
                   </div>
                 </div>
@@ -278,40 +269,6 @@
                 class="block font-bold mt-0.5"
                 >🔥 {{ sName }} (4件套额外战力加成已生效)</span
               >
-            </div>
-
-            <!-- 防具槽位 -->
-            <div
-              class="bg-gray-900/60 p-3 rounded-lg border border-gray-700/60 flex items-center justify-between"
-            >
-              <div class="flex items-center space-x-3">
-                <div
-                  class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-gray-700"
-                >
-                  {{ gameData.equipment.armor ? gameData.equipment.armor.icon :
-                  '🛡️' }}
-                </div>
-                <div>
-                  <div class="text-xs text-gray-400">防具</div>
-                  <div class="text-sm font-bold text-gray-200">
-                    {{ gameData.equipment.armor ? gameData.equipment.armor.name
-                    : '未装备' }}
-                  </div>
-                  <div
-                    v-if="gameData.equipment.armor"
-                    class="text-[10px] text-amber-400 font-semibold"
-                  >
-                    战力 +{{ gameData.equipment.armor.power }}
-                  </div>
-                </div>
-              </div>
-              <button
-                v-if="gameData.equipment.armor"
-                @click="unequipItem('armor')"
-                class="bg-gray-700 hover:bg-red-600/80 text-xs px-2.5 py-1 rounded transition text-gray-200"
-              >
-                脱下
-              </button>
             </div>
           </div>
 
@@ -471,7 +428,7 @@
                         <span
                           class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-gray-900/60 text-gray-300"
                         >
-                          {{ item.type === 'weapon' ? '武器' : '防具' }}
+                          {{ getSlotLabel(item.type) }}
                         </span>
                       </div>
                       <div
@@ -619,7 +576,6 @@
     <script>
       const { createApp } = Vue;
 
-      // 🟢 你的 Supabase 配置
       const SUPABASE_URL = "https://zujpmqardtdsxnfnflqc.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY =
         "sb_publishable_mYDprz5_fhfL0JIPbMtWCQ_lsparlrj";
@@ -639,7 +595,7 @@
           return {
             authMode: "login",
             currentUser: null,
-            userId: null, // 对应 users.id
+            userId: null,
             form: { username: "", password: "" },
             authError: "",
             isExploring: false,
@@ -662,6 +618,7 @@
               maxCrates: 5,
               inventory: [],
               equipment: {
+                weapon: null,
                 head: null,
                 armor: null,
                 hand: null,
@@ -674,9 +631,10 @@
         },
         computed: {
           totalPower() {
-            let p = 10; // 基础战力
+            let p = 10;
             const eq = this.gameData.equipment;
             const equippedItems = [
+              eq.weapon,
               eq.head,
               eq.armor,
               eq.hand,
@@ -684,12 +642,10 @@
               eq.ring,
             ].filter(Boolean);
 
-            // 累加各部位战力
             equippedItems.forEach((item) => {
               p += item.power || 0;
             });
 
-            // 检查套装效果 (4件套)
             const setCounts = {};
             equippedItems.forEach((item) => {
               if (item.setName) {
@@ -697,7 +653,6 @@
               }
             });
 
-            // 看看哪个套装达到了 4 件以上
             for (const [setName, count] of Object.entries(setCounts)) {
               if (count >= 4 && SETS_DATABASE[setName]) {
                 p += SETS_DATABASE[setName].bonusPower;
@@ -707,10 +662,10 @@
             return p;
           },
 
-          // 额外写一个计算当前激活了什么套装的属性，用来在界面上展示炫酷提示
           activeSetNames() {
             const eq = this.gameData.equipment;
             const equippedItems = [
+              eq.weapon,
               eq.head,
               eq.armor,
               eq.hand,
@@ -784,7 +739,6 @@
           }
         },
         methods: {
-          // 1. 登录与注册逻辑（带前端格式严格校验）
           async handleAuth() {
             this.authError = "";
             const username = this.form.username;
@@ -792,11 +746,9 @@
 
             try {
               if (this.authMode === "register") {
-                // 🟢 严格校验：账号必须是 8-16 位纯数字
                 if (!/^\d{8,16}$/.test(username)) {
                   throw new Error("用户名格式错误！须为 8-16 位纯数字");
                 }
-                // 🟢 严格校验：密码必须是 8-16 位，含字母和数字，无特殊符号
                 if (
                   !password ||
                   !/^(?=.*[a-zA-Z])[a-zA-Z0-9]{6,20}$/.test(password)
@@ -806,7 +758,6 @@
                   );
                 }
 
-                // 检查用户名是否已存在
                 const { data: existing } = await db
                   .from("users")
                   .select("id")
@@ -816,7 +767,6 @@
                   throw new Error("该账号已被注册！");
                 }
 
-                // 1. 写入用户表
                 const { data: newUser, error: userError } = await db
                   .from("users")
                   .insert([{ username: username, password: password }])
@@ -825,7 +775,6 @@
 
                 if (userError) throw new Error(userError.message);
 
-                // 2. 初始化关联的 game_saves 存档表
                 const { error: saveError } = await db
                   .from("game_saves")
                   .insert([
@@ -838,7 +787,14 @@
                       is_vip: 0,
                       crates: [],
                       inventory: [],
-                      equipment: { weapon: null, armor: null },
+                      equipment: {
+                        weapon: null,
+                        head: null,
+                        armor: null,
+                        hand: null,
+                        leg: null,
+                        ring: null,
+                      },
                     },
                   ]);
 
@@ -847,7 +803,6 @@
                 this.authMode = "login";
                 alert("🎉 注册成功，请使用新账号登录！");
               } else {
-                // 登录：检查账号密码
                 const { data, error } = await db
                   .from("users")
                   .select("*")
@@ -866,7 +821,6 @@
                   JSON.stringify({ username: data.username, userId: data.id }),
                 );
 
-                // 读取云端存档
                 await this.fetchUserData();
                 this.form = { username: "", password: "" };
               }
@@ -875,7 +829,6 @@
             }
           },
 
-          // 修改密码逻辑
           async changePassword() {
             this.passwordError = "";
             const oldPwd = this.passwordForm.oldPassword;
@@ -886,14 +839,12 @@
                 throw new Error("旧密码和新密码不能为空！");
               }
 
-              // 校验新密码格式：6-20 位，必须含字母和数字，无符号
               if (!/^(?=.*[a-zA-Z])[a-zA-Z0-9]{6,20}$/.test(newPwd)) {
                 throw new Error(
                   "新密码须为 6-20 位字符，且必须包含字母和数字，不能包含符号",
                 );
               }
 
-              // 1. 验证旧密码是否正确
               const { data: userRecord, error: checkError } = await db
                 .from("users")
                 .select("id")
@@ -905,7 +856,6 @@
                 throw new Error("旧密码输入错误！");
               }
 
-              // 2. 更新为新密码
               const { error: updateError } = await db
                 .from("users")
                 .update({ password: newPwd })
@@ -918,14 +868,12 @@
               alert("🎉 密码修改成功！请使用新密码重新登录。");
               this.showPasswordModal = false;
               this.passwordForm = { oldPassword: "", newPassword: "" };
-
-              // 修改密码后顺便退出登录，保证安全性
               this.logout();
             } catch (err) {
               this.passwordError = err.message;
             }
           },
-          // 2. 从云端 game_saves 获取玩家存档
+
           async fetchUserData() {
             if (!this.userId) return;
             try {
@@ -938,14 +886,6 @@
               if (data) {
                 let rawEq = data.equipment || {};
 
-                // 兼容处理：把旧存档的 weapon/armor 平滑过渡到新 5 部位
-                // 如果旧存档有 weapon，可以暂且把它放入 hand（手部）；如果没有，就保持 null
-                let migratedHand = rawEq.hand || rawEq.weapon || null;
-                let migratedArmor =
-                  rawEq.armor && typeof rawEq.armor === "object"
-                    ? rawEq.armor
-                    : null;
-
                 this.gameData = {
                   caps: data.caps,
                   level: data.level || 1,
@@ -954,11 +894,11 @@
                   isVip: Boolean(data.is_vip),
                   crates: data.crates || [],
                   inventory: data.inventory || [],
-                  // 确保 5 个槽位全都被完整初始化，防止取属性时 undefined 报错
                   equipment: {
+                    weapon: rawEq.weapon || null,
                     head: rawEq.head || null,
-                    armor: migratedArmor,
-                    hand: migratedHand,
+                    armor: rawEq.armor || null,
+                    hand: rawEq.hand || null,
                     leg: rawEq.leg || null,
                     ring: rawEq.ring || null,
                   },
@@ -970,7 +910,6 @@
             }
           },
 
-          // 3. 保存存档到云端 game_saves
           async saveUserData() {
             if (!this.userId) return;
             try {
@@ -1114,7 +1053,7 @@
             );
             if (index === -1) return;
 
-            const targetType = item.type; // 自动对应 head, armor, hand, leg, ring 中的一个
+            const targetType = item.type;
             const currentEquipped = this.gameData.equipment[targetType];
 
             this.gameData.inventory.splice(index, 1);
@@ -1128,7 +1067,6 @@
           },
 
           unequipItem(type) {
-            // 传入对应的槽位key，比如 'head', 'ring' 等
             const itemToUnequip = this.gameData.equipment[type];
             if (!itemToUnequip) return;
 
@@ -1176,8 +1114,16 @@
               `成功出售 ${itemsToSell.length} 件装备，获得 💰${totalEarned} 瓶盖！`,
             );
           },
-          slotName(type) {
-            return type === "weapon" ? "主武器" : "防具";
+          getSlotLabel(type) {
+            const labels = {
+              weapon: "武器",
+              head: "头部",
+              armor: "护甲",
+              hand: "手部",
+              leg: "腿部",
+              ring: "戒指",
+            };
+            return labels[type] || "装备";
           },
           async redeemCDK() {
             if (this.cdkInput === "VIP888" || this.cdkInput === "666666") {
