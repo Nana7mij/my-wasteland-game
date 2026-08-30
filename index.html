@@ -936,6 +936,16 @@
                 .maybeSingle();
 
               if (data) {
+                let rawEq = data.equipment || {};
+
+                // 兼容处理：把旧存档的 weapon/armor 平滑过渡到新 5 部位
+                // 如果旧存档有 weapon，可以暂且把它放入 hand（手部）；如果没有，就保持 null
+                let migratedHand = rawEq.hand || rawEq.weapon || null;
+                let migratedArmor =
+                  rawEq.armor && typeof rawEq.armor === "object"
+                    ? rawEq.armor
+                    : null;
+
                 this.gameData = {
                   caps: data.caps,
                   level: data.level || 1,
@@ -944,7 +954,14 @@
                   isVip: Boolean(data.is_vip),
                   crates: data.crates || [],
                   inventory: data.inventory || [],
-                  equipment: data.equipment || { weapon: null, armor: null },
+                  // 确保 5 个槽位全都被完整初始化，防止取属性时 undefined 报错
+                  equipment: {
+                    head: rawEq.head || null,
+                    armor: migratedArmor,
+                    hand: migratedHand,
+                    leg: rawEq.leg || null,
+                    ring: rawEq.ring || null,
+                  },
                 };
                 this.updateMaxCrates();
               }
