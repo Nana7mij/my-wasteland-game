@@ -121,6 +121,12 @@
                 </div>
               </div>
               <div class="text-right">
+                <div class="text-xs text-gray-400">实时在线</div>
+                <div class="text-lg font-bold text-emerald-400">
+                  🟢 {{ onlineCount }} 人
+                </div>
+              </div>
+              <div class="text-right">
                 <div class="text-xs text-gray-400">瓶盖 (金币)</div>
                 <div class="text-lg font-bold text-yellow-400">
                   💰 {{ gameData.caps }}
@@ -292,9 +298,9 @@
                 </button>
               </div>
 
-              <!-- 滚动展示区域 -->
+              <!-- 滚动展示区域（固定高度为两行，超出直接内部滚动，不撑开页面） -->
               <div
-                class="max-h-[220px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
+                class="h-[195px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
               >
                 <div
                   class="grid grid-cols-4 sm:grid-cols-5 gap-2 min-h-[100px]"
@@ -628,6 +634,8 @@
             exploreTimer: null,
             showVipModal: false,
             showPasswordModal: false,
+            onlineCount: 1, // 默认至少显示自己
+            presenceChannel: null, // 用于管理实时通道
             cdkInput: "",
             inventorySortType: "default",
             passwordForm: { oldPassword: "", newPassword: "" },
@@ -758,7 +766,9 @@
             const sess = JSON.parse(savedSession);
             this.currentUser = sess.username;
             this.userId = sess.userId;
-            this.fetchUserData();
+            this.fetchUserData().then(() => {
+              this.initOnlinePresence(); // 👈 确保数据加载完后启动在线状态
+            });
           }
         },
         methods: {
@@ -845,6 +855,7 @@
                 );
 
                 await this.fetchUserData();
+                this.initOnlinePresence();
                 this.form = { username: "", password: "" };
               }
             } catch (err) {
@@ -984,8 +995,51 @@
               this.updateMaxCrates();
             }
           },
+          // ... 其他已有方法保持不变
+
+          initOnlinePresence() {
+            if (!this.currentUser) return;
+
+            // 如果之前有通道，先注销
+            if (this.presenceChannel) {
+              db.removeChannel(this.presenceChannel);
+            }
+
+            // 创建一个名为 'online-players' 的 realtime 房间
+            this.presenceChannel = db.channel("online-players", {
+              config: {
+                presence: {
+                  key: this.currentUser, // 用用户名作为唯一标识
+                },
+              },
+            });
+
+            this.presenceChannel
+              .on("presence", { event: "sync" }, () => {
+                const state = this.presenceChannel.presenceState();
+                // 统计当前频道内有多少个不同的在线用户
+                this.onlineCount = Object.keys(state).length;
+              })
+              .subscribe(async (status) => {
+                if (status === "SUBSCRIBED") {
+                  // 成功加入后，向所有人广播自己的在线状态
+                  await this.presenceChannel.track({
+                    user: this.currentUser,
+                    online_at: new Date().toISOString(),
+                  });
+                }
+              });
+          },
+
           logout() {
             if (this.isExploring) this.toggleExplore();
+
+            // 退出时销毁实时通道
+            if (this.presenceChannel) {
+              db.removeChannel(this.presenceChannel);
+              this.presenceChannel = null;
+            }
+
             this.currentUser = null;
             this.userId = null;
             localStorage.removeItem("wasteland_session");
