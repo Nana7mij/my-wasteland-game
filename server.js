@@ -13,11 +13,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
     
-    if (!/^[a-zA-Z0-9_]{4,16}$/.test(username)) {
-        return res.status(400).json({ error: '用户名格式错误！须为 4-16 位字母、数字或下划线' });
+    // 1. 校验账号：必须是 8-16 位的纯数字
+    if (!/^\d{8,16}$/.test(username)) {
+        return res.status(400).json({ error: '用户名格式错误！须为 8-16 位纯数字' });
     }
-    if (!password || password.length < 6 || password.length > 20) {
-        return res.status(400).json({ error: '密码须为 6-20 位字符' });
+    // 2. 校验密码：必须是 6-20 位，且只能包含字母和数字，且必须至少包含一个字母
+    if (!password || !/^(?=.*[a-zA-Z])[a-zA-Z0-9]{8,16}$/.test(password)) {
+        return res.status(400).json({ error: '密码须为 8-16 位字符，且必须包含字母和数字，不能包含符号' });
     }
 
     try {
