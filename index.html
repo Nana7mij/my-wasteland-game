@@ -208,7 +208,7 @@
               </div>
             </div>
 
-            <!-- 6大装备槽位循环展示 (新增 weapon 武器槽) -->
+            <!-- 6大装备槽位循环展示 -->
             <div class="space-y-2">
               <div
                 v-for="(slotNameText, slotKey) in { weapon: '武器', head: '头部', armor: '护甲', hand: '手部', leg: '腿部', ring: '戒指' }"
@@ -323,7 +323,7 @@
             <!-- 背包战利品区 -->
             <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
               <div
-                class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-3"
+                class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-2 mb-3"
               >
                 <div class="flex items-center space-x-3">
                   <h2
@@ -350,7 +350,8 @@
                   </button>
                 </div>
 
-                <div class="flex items-center space-x-3 text-xs">
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                  <!-- 6种品质全选/勾选框 -->
                   <div
                     class="flex items-center space-x-2 bg-gray-900 px-2 py-1 rounded border border-gray-700/80"
                   >
@@ -397,6 +398,28 @@
                         class="rounded accent-amber-500"
                       />
                       <span>史诗</span>
+                    </label>
+                    <label
+                      class="flex items-center space-x-1 cursor-pointer text-yellow-400 hover:text-yellow-300"
+                    >
+                      <input
+                        type="checkbox"
+                        value="legendary"
+                        v-model="selectedSellRarities"
+                        class="rounded accent-amber-500"
+                      />
+                      <span>传说</span>
+                    </label>
+                    <label
+                      class="flex items-center space-x-1 cursor-pointer text-red-400 hover:text-red-300"
+                    >
+                      <input
+                        type="checkbox"
+                        value="mythic"
+                        v-model="selectedSellRarities"
+                        class="rounded accent-amber-500"
+                      />
+                      <span>神话</span>
                     </label>
                   </div>
 
@@ -609,7 +632,7 @@
             inventorySortType: "default",
             passwordForm: { oldPassword: "", newPassword: "" },
             passwordError: "",
-            selectedSellRarities: ["common"],
+            selectedSellRarities: ["common", "uncommon"],
             gameData: {
               caps: 100,
               level: 1,
