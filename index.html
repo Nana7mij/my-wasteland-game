@@ -25,12 +25,12 @@
 
         <form @submit.prevent="handleAuth" class="space-y-4">
             <div>
-                <label class="block text-xs text-gray-400 mb-1">账号 (4-16位字母/数字/下划线)</label>
-                <input v-model.trim="form.username" type="text" maxlength="16" required placeholder="请输入用户名" 
+                <label class="block text-xs text-gray-400 mb-1">账号 (8-16位纯数字)</label>
+                <input v-model.trim="form.username" type="text" maxlength="16" required placeholder="请输入8-16位纯数字用户名" 
                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
             </div>
             <div>
-                <label class="block text-xs text-gray-400 mb-1">密码 (6-20位字符)</label>
+                <label class="block text-xs text-gray-400 mb-1">密码 (8-16位，须含字母和数字，无符号)</label>
                 <input v-model.trim="form.password" type="password" maxlength="20" required placeholder="请输入密码" 
                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
             </div>
@@ -394,7 +394,7 @@ createApp({
         }
     },
     methods: {
-        // 1. 登录与注册逻辑（对接独立 users 表与 game_saves 表）
+        // 1. 登录与注册逻辑（带前端格式严格校验）
         async handleAuth() {
             this.authError = '';
             const username = this.form.username;
@@ -402,6 +402,15 @@ createApp({
 
             try {
                 if (this.authMode === 'register') {
+                    // 🟢 严格校验：账号必须是 8-16 位纯数字
+                    if (!/^\d{8,16}$/.test(username)) {
+                        throw new Error('用户名格式错误！须为 8-16 位纯数字');
+                    }
+                    // 🟢 严格校验：密码必须是 8-16 位，含字母和数字，无特殊符号
+                    if (!password || !/^(?=.*[a-zA-Z])[a-zA-Z0-9]{6,20}$/.test(password)) {
+                        throw new Error('密码须为 8-16 位字符，且必须包含字母和数字，不能包含符号');
+                    }
+
                     // 检查用户名是否已存在
                     const { data: existing } = await db.from('users').select('id').eq('username', username).maybeSingle();
                     if (existing) {
