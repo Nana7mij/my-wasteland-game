@@ -299,12 +299,11 @@
 <script>
 const { createApp } = Vue;
 
-// 🟢 替换为你的 Supabase 配置
+// 🟢 你的 Supabase 配置
 const SUPABASE_URL = 'https://zujpmqardtdsxnfnflqc.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_mYDprz5_fhfL0JIPbMtWCQ_lsparlrj';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// 各品质获得的经验配置
 const EXP_REWARDS = {
     common: 10,
     uncommon: 25,
@@ -319,18 +318,17 @@ createApp({
         return {
             authMode: 'login',
             currentUser: null,
-            userId: null,
+            userId: null, // 对应 users.id
             form: { username: '', password: '' },
             authError: '',
             isExploring: false,
-            remainingCount: 0, // 剩余挂机包数（初始 200）
-            searchProgressTimer: 6, // 当前单包 6 秒倒计时
-            exploreInterval: null, // 定时器句柄
+            remainingCount: 0,
+            searchProgressTimer: 6,
+            exploreInterval: null,
             exploreTimer: null,
             showVipModal: false,
             cdkInput: '',
             inventorySortType: 'default',
-            // 👈 新增：玩家勾选需要批量出售的品质
             selectedSellRarities: ['common'], 
             gameData: { 
                 caps: 100, 
@@ -354,18 +352,15 @@ createApp({
         exploreStatusText() {
             return this.isExploring ? "小队正在废土中搜寻资源..." : "小队待命中，随时可出发";
         },
-        // 计算当前等级升级所需总经验（前快后慢平滑升级曲线）
         maxExpForCurrentLevel() {
             const lvl = this.gameData.level;
             return Math.floor(100 * Math.pow(lvl, 1.35));
         },
-        // 经验条百分比显示
         expPercentage() {
             if (this.gameData.level >= 9999) return 100;
             const pct = (this.gameData.exp / this.maxExpForCurrentLevel) * 100;
             return Math.min(100, Math.max(0, pct));
         },
-        // 背包战利品品质排序计算
         sortedInventory() {
             const rarityWeight = {
                 mythic: 6,
@@ -388,17 +383,16 @@ createApp({
         }
     },
     mounted() {
-        // 🟢 修改：直接从 localStorage 读取已登录的用户名
         const savedSession = localStorage.getItem('wasteland_session');
         if (savedSession) {
             const sess = JSON.parse(savedSession);
             this.currentUser = sess.username;
-            this.userId = sess.username; // 这里用用户名作为唯一标识
+            this.userId = sess.userId;
             this.fetchUserData();
         }
     },
     methods: {
-        // 1. 登录与注册逻辑（直接操作 Supabase 数据库）
+        // 1. 登录与注册逻辑（对接独立 users 表与 game_saves 表）
         async handleAuth() {
             this.authError = '';
             const username = this.form.username;
@@ -407,28 +401,32 @@ createApp({
             try {
                 if (this.authMode === 'register') {
                     // 检查用户名是否已存在
-                    const { data: existing } = await db.from('users').select('username').eq('username', username).single();
+                    const { data: existing } = await db.from('users').select('id').eq('username', username).maybeSingle();
                     if (existing) {
                         throw new Error('该账号已被注册！');
                     }
 
-                    // 默认初始游戏数据
-                    const defaultGameData = {
+                    // 1. 写入用户表
+                    const { data: newUser, error: userError } = await db.from('users').insert([
+                        { username: username, password: password }
+                    ]).select('id').single();
+
+                    if (userError) throw new Error(userError.message);
+
+                    // 2. 初始化关联的 game_saves 存档表
+                    const { error: saveError } = await db.from('game_saves').insert([{
+                        user_id: newUser.id,
                         caps: 100,
                         level: 1,
                         exp: 0,
+                        max_crates: 5,
+                        is_vip: 0,
                         crates: [],
-                        maxCrates: 5,
                         inventory: [],
-                        equipment: { weapon: null, armor: null },
-                        isVip: false
-                    };
+                        equipment: { weapon: null, armor: null }
+                    }]);
 
-                    // 写入 Supabase 数据库
-                    const { error } = await db.from('users').insert([
-                        { username: username, password: password, game_data: defaultGameData }
-                    ]);
-                    if (error) throw new Error(error.message);
+                    if (saveError) throw new Error(saveError.message);
 
                     this.authMode = 'login';
                     alert('🎉 注册成功，请使用新账号登录！');
@@ -438,20 +436,18 @@ createApp({
                         .select('*')
                         .eq('username', username)
                         .eq('password', password)
-                        .single();
+                        .maybeSingle();
 
                     if (error || !data) {
                         throw new Error('账号或密码错误！');
                     }
 
                     this.currentUser = data.username;
-                    this.userId = data.username;
-                    localStorage.setItem('wasteland_session', JSON.stringify({ username: data.username }));
+                    this.userId = data.id;
+                    localStorage.setItem('wasteland_session', JSON.stringify({ username: data.username, userId: data.id }));
                     
                     // 读取云端存档
-                    this.gameData = data.game_data || this.gameData;
-                    this.updateMaxCrates();
-                    
+                    await this.fetchUserData();
                     this.form = { username: '', password: '' };
                 }
             } catch (err) {
@@ -459,17 +455,26 @@ createApp({
             }
         },
 
-        // 2. 从云端获取玩家存档
+        // 2. 从云端 game_saves 获取玩家存档
         async fetchUserData() {
-            if (!this.currentUser) return;
+            if (!this.userId) return;
             try {
-                const { data, error } = await db.from('users')
-                    .select('game_data')
-                    .eq('username', this.currentUser)
-                    .single();
+                const { data, error } = await db.from('game_saves')
+                    .select('*')
+                    .eq('user_id', this.userId)
+                    .maybeSingle();
                 
-                if (data && data.game_data) {
-                    this.gameData = data.game_data;
+                if (data) {
+                    this.gameData = {
+                        caps: data.caps,
+                        level: data.level || 1,
+                        exp: data.exp || 0,
+                        maxCrates: data.max_crates || 5,
+                        isVip: Boolean(data.is_vip),
+                        crates: data.crates || [],
+                        inventory: data.inventory || [],
+                        equipment: data.equipment || { weapon: null, armor: null }
+                    };
                     this.updateMaxCrates();
                 }
             } catch (err) {
@@ -477,19 +482,28 @@ createApp({
             }
         },
 
-        // 3. 保存存档到云端
+        // 3. 保存存档到云端 game_saves
         async saveUserData() {
-            if (!this.currentUser) return;
+            if (!this.userId) return;
             try {
-                await db.from('users')
-                    .update({ game_data: this.gameData })
-                    .eq('username', this.currentUser);
+                await db.from('game_saves')
+                    .update({
+                        caps: this.gameData.caps,
+                        level: this.gameData.level,
+                        exp: this.gameData.exp,
+                        max_crates: this.gameData.maxCrates,
+                        is_vip: this.gameData.isVip ? 1 : 0,
+                        crates: this.gameData.crates,
+                        inventory: this.gameData.inventory,
+                        equipment: this.gameData.equipment,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', this.userId);
             } catch (err) {
                 console.error('保存存档失败', err);
             }
         },
 
-        // 切换背包战利品排序方式
         toggleInventorySort() {
             if (this.inventorySortType === 'default') {
                 this.inventorySortType = 'desc';
@@ -499,16 +513,13 @@ createApp({
                 this.inventorySortType = 'default';
             }
         },
-        // 校验等级与容量逻辑
         updateMaxCrates() {
             if (!this.gameData.isVip) {
-                // 基础5格子 + 每提升1级多1个格子
                 this.gameData.maxCrates = 5 + (this.gameData.level - 1);
             } else {
                 this.gameData.maxCrates = 9999;
             }
         },
-        // 经验增加与连升处理
         addExp(amount) {
             if (this.gameData.level >= 9999) return;
 
@@ -525,13 +536,10 @@ createApp({
             this.userId = null;
             localStorage.removeItem('wasteland_session');
         },
-        // 1. 切换/开始 200 包挂机
         toggleExplore() {
             if (this.isExploring) {
-                // 停止挂机
                 this.stopExplore();
             } else {
-                // 开始 200 包挂机
                 this.isExploring = true;
                 this.remainingCount = 200;
                 this.searchProgressTimer = 6;
@@ -539,17 +547,11 @@ createApp({
                 this.exploreInterval = setInterval(() => {
                     this.searchProgressTimer--;
 
-                    // 倒计时到了 6 秒
                     if (this.searchProgressTimer <= 0) {
                         this.searchProgressTimer = 6;
-
-                        // 1. 获取一个包裹
                         this.addCrate();
-
-                        // 2. 扣减 1 次挂机包数
                         this.remainingCount--;
 
-                        // 3. 次数挂完，自动结束
                         if (this.remainingCount <= 0) {
                             this.stopExplore();
                         }
@@ -557,8 +559,6 @@ createApp({
                 }, 1000);
             }
         },
-
-        // 2. 停止挂机
         stopExplore() {
             this.isExploring = false;
             if (this.exploreInterval) {
@@ -566,16 +566,11 @@ createApp({
                 this.exploreInterval = null;
             }
         },
-
-        // 3. 获得包裹逻辑（含溢出自动开包）
         addCrate() {
-            // 如果包裹槽位已达到上限
             if (this.gameData.crates.length >= this.gameData.maxCrates) {
-                // 触发自动一键开启所有包裹
                 this.openAllCrates();
             }
 
-            // 放入新获得的包裹
             this.gameData.crates.push({
                 id: Date.now() + Math.random(),
                 createdAt: new Date().toISOString()
@@ -583,28 +578,24 @@ createApp({
 
             this.saveUserData();
         },
-
         openCrate(index) {
             this.gameData.crates.splice(index, 1);
             
-            // 生成 0 到 100 之间的随机数
             const rand = Math.random() * 100;
             let rarity = "common";
 
-            // 🎯 6秒/包 频率下的掉落概率（全天24h约掉落 3-4 个神话）
             if (rand > 99.972) {
-                rarity = "mythic";       // 神话品质：0.028% 概率 (全天24h约产出 4 个)
+                rarity = "mythic";
             } else if (rand > 99.7) {
-                rarity = "legendary";    // 传说品质：0.272% 概率 (全天24h约产出 39 个)
+                rarity = "legendary";
             } else if (rand > 97.0) {
-                rarity = "epic";         // 史诗品质：2.700% 概率 (全天24h约产出 388 个)
+                rarity = "epic";
             } else if (rand > 85.0) {
-                rarity = "rare";         // 稀有品质：12.00% 概率
+                rarity = "rare";
             } else if (rand > 55.0) {
-                rarity = "uncommon";     // 罕见品质：30.00% 概率
-            }                            // 普通品质：55.00% 概率 (剩余所有情况)
+                rarity = "uncommon";
+            }
 
-            // 根据抽取的品质增加经验
             const expGained = EXP_REWARDS[rarity] || 10;
             this.addExp(expGained);
 
@@ -620,60 +611,38 @@ createApp({
                 this.openCrate(0);
             }
         },
-        // 1. 装备/替换装备逻辑
         equipItem(item) {
-            // 在背包中找到当前点击物品的下标
             const index = this.gameData.inventory.findIndex(i => i.id === item.id);
             if (index === -1) return;
 
-            const targetType = item.type; // 'weapon' 或 'armor'
+            const targetType = item.type;
             const currentEquipped = this.gameData.equipment[targetType];
 
-            // 先将要穿的新装备从背包数组中移除
             this.gameData.inventory.splice(index, 1);
 
-            // 如果当前位置已经穿了装备，把旧装备卸下放回背包
             if (currentEquipped) {
                 this.gameData.inventory.unshift(currentEquipped);
             }
 
-            // 把新装备穿到角色身上
             this.gameData.equipment[targetType] = item;
-
-            // 保存数据
             this.saveUserData();
         },
-
-        // 2. 脱下装备逻辑
         unequipItem(type) {
             const itemToUnequip = this.gameData.equipment[type];
             if (!itemToUnequip) return;
 
-            // 放回背包
             this.gameData.inventory.unshift(itemToUnequip);
-
-            // 将装备栏清空
             this.gameData.equipment[type] = null;
-
-            // 保存数据
             this.saveUserData();
         },
-
-        // 3. 单件售卖逻辑
         sellItem(item) {
             const index = this.gameData.inventory.findIndex(i => i.id === item.id);
             if (index === -1) return;
 
-            // 增加瓶盖
             this.gameData.caps += (item.price || 0);
-
-            // 从背包中安全移除
             this.gameData.inventory.splice(index, 1);
-
-            // 保存数据
             this.saveUserData();
         },
-        // 批量出售选中的品质装备
         sellTrash() {
             if (this.selectedSellRarities.length === 0) {
                 alert("请先至少勾选一种要出售的装备品质！");
@@ -702,7 +671,6 @@ createApp({
         slotName(type) {
             return type === 'weapon' ? '主武器' : '防具';
         },
-        // 4. 修改：VIP 卡密兑换逻辑
         async redeemCDK() {
             if (this.cdkInput === 'VIP888' || this.cdkInput === '666666') {
                 this.gameData.isVip = true;
