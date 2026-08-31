@@ -444,118 +444,115 @@
 
                 <!-- 背包战利品 -->
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <!-- 头部控制栏：改用 flex-wrap 并优化间距，避免在中等屏幕下突兀换行和右侧留空 -->
-                  <div
-                    class="flex flex-wrap justify-between items-center gap-3 mb-3"
-                  >
-                    <div class="flex items-center space-x-3">
-                      <h2
-                        class="text-sm font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                  <!-- 第一行：左侧标题，右侧品质排序按钮 -->
+                  <div class="flex justify-between items-center mb-3">
+                    <h2
+                      class="text-sm font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                    >
+                      背包战利品 ({{ gameData.inventory.length }})
+                    </h2>
+                    <button
+                      @click="toggleInventorySort"
+                      class="flex items-center space-x-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 text-xs px-2.5 py-1 rounded transition text-amber-400"
+                    >
+                      <span>品质排序</span>
+                      <span
+                        v-if="inventorySortType === 'desc'"
+                        class="text-amber-500 font-bold"
+                        >▼</span
                       >
-                        背包战利品 ({{ gameData.inventory.length }})
-                      </h2>
-                      <button
-                        @click="toggleInventorySort"
-                        class="flex items-center space-x-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 text-xs px-2.5 py-1 rounded transition text-amber-400"
+                      <span
+                        v-else-if="inventorySortType === 'asc'"
+                        class="text-amber-500 font-bold"
+                        >▲</span
                       >
-                        <span>品质排序</span>
-                        <span
-                          v-if="inventorySortType === 'desc'"
-                          class="text-amber-500 font-bold"
-                          >▼</span
-                        >
-                        <span
-                          v-else-if="inventorySortType === 'asc'"
-                          class="text-amber-500 font-bold"
-                          >▲</span
-                        >
-                        <span v-else class="text-gray-500 font-normal">--</span>
-                      </button>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-2 text-xs">
-                      <div
-                        class="flex items-center space-x-2 bg-gray-900 px-2 py-1 rounded border border-gray-700/80"
-                      >
-                        <label
-                          class="flex items-center space-x-1 cursor-pointer text-gray-300 hover:text-white"
-                        >
-                          <input
-                            type="checkbox"
-                            value="common"
-                            v-model="selectedSellRarities"
-                            class="rounded accent-amber-500"
-                          />
-                          <span>普通</span>
-                        </label>
-                        <label
-                          class="flex items-center space-x-1 cursor-pointer text-green-400 hover:text-green-300"
-                        >
-                          <input
-                            type="checkbox"
-                            value="uncommon"
-                            v-model="selectedSellRarities"
-                            class="rounded accent-amber-500"
-                          />
-                          <span>罕见</span>
-                        </label>
-                        <label
-                          class="flex items-center space-x-1 cursor-pointer text-blue-400 hover:text-blue-300"
-                        >
-                          <input
-                            type="checkbox"
-                            value="rare"
-                            v-model="selectedSellRarities"
-                            class="rounded accent-amber-500"
-                          />
-                          <span>稀有</span>
-                        </label>
-                        <label
-                          class="flex items-center space-x-1 cursor-pointer text-purple-400 hover:text-purple-300"
-                        >
-                          <input
-                            type="checkbox"
-                            value="epic"
-                            v-model="selectedSellRarities"
-                            class="rounded accent-amber-500"
-                          />
-                          <span>史诗</span>
-                        </label>
-                        <label
-                          class="flex items-center space-x-1 cursor-pointer text-yellow-400 hover:text-yellow-300"
-                        >
-                          <input
-                            type="checkbox"
-                            value="legendary"
-                            v-model="selectedSellRarities"
-                            class="rounded accent-amber-500"
-                          />
-                          <span>传说</span>
-                        </label>
-                        <label
-                          class="flex items-center space-x-1 cursor-pointer text-red-400 hover:text-red-300"
-                        >
-                          <input
-                            type="checkbox"
-                            value="mythic"
-                            v-model="selectedSellRarities"
-                            class="rounded accent-amber-500"
-                          />
-                          <span>神话</span>
-                        </label>
-                      </div>
-
-                      <button
-                        @click="sellTrash"
-                        :disabled="gameData.inventory.length === 0"
-                        class="bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-xs px-3 py-1.5 rounded font-bold transition whitespace-nowrap text-white"
-                      >
-                        一键出售勾选
-                      </button>
-                    </div>
+                      <span v-else class="text-gray-500 font-normal">--</span>
+                    </button>
                   </div>
 
-                  <!-- 下方物品卡片网格：调整响应式列数，让大屏下能排布更多列，填满右侧空间 -->
+                  <!-- 第二行：左侧品质勾选框，右侧一键出售按钮 -->
+                  <div class="flex justify-between items-center gap-2 mb-3">
+                    <div
+                      class="flex flex-wrap items-center space-x-2 bg-gray-900 px-2 py-1 rounded border border-gray-700/80 text-xs"
+                    >
+                      <label
+                        class="flex items-center space-x-1 cursor-pointer text-gray-300 hover:text-white"
+                      >
+                        <input
+                          type="checkbox"
+                          value="common"
+                          v-model="selectedSellRarities"
+                          class="rounded accent-amber-500"
+                        />
+                        <span>普通</span>
+                      </label>
+                      <label
+                        class="flex items-center space-x-1 cursor-pointer text-green-400 hover:text-green-300"
+                      >
+                        <input
+                          type="checkbox"
+                          value="uncommon"
+                          v-model="selectedSellRarities"
+                          class="rounded accent-amber-500"
+                        />
+                        <span>罕见</span>
+                      </label>
+                      <label
+                        class="flex items-center space-x-1 cursor-pointer text-blue-400 hover:text-blue-300"
+                      >
+                        <input
+                          type="checkbox"
+                          value="rare"
+                          v-model="selectedSellRarities"
+                          class="rounded accent-amber-500"
+                        />
+                        <span>稀有</span>
+                      </label>
+                      <label
+                        class="flex items-center space-x-1 cursor-pointer text-purple-400 hover:text-purple-300"
+                      >
+                        <input
+                          type="checkbox"
+                          value="epic"
+                          v-model="selectedSellRarities"
+                          class="rounded accent-amber-500"
+                        />
+                        <span>史诗</span>
+                      </label>
+                      <label
+                        class="flex items-center space-x-1 cursor-pointer text-yellow-400 hover:text-yellow-300"
+                      >
+                        <input
+                          type="checkbox"
+                          value="legendary"
+                          v-model="selectedSellRarities"
+                          class="rounded accent-amber-500"
+                        />
+                        <span>传说</span>
+                      </label>
+                      <label
+                        class="flex items-center space-x-1 cursor-pointer text-red-400 hover:text-red-300"
+                      >
+                        <input
+                          type="checkbox"
+                          value="mythic"
+                          v-model="selectedSellRarities"
+                          class="rounded accent-amber-500"
+                        />
+                        <span>神话</span>
+                      </label>
+                    </div>
+
+                    <button
+                      @click="sellTrash"
+                      :disabled="gameData.inventory.length === 0"
+                      class="bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-xs px-3 py-1.5 rounded font-bold transition whitespace-nowrap text-white"
+                    >
+                      一键出售勾选
+                    </button>
+                  </div>
+
+                  <!-- 下方物品卡片网格 -->
                   <div
                     class="max-h-[300px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
                   >
