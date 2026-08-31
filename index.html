@@ -11,11 +11,11 @@
     <link rel="icon" href="./favicon.ico" />
   </head>
   <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
-    <div id="app" class="max-w-6xl mx-auto p-4">
-      <!-- 1. 未登录状态 -->
+    <div id="app" class="flex min-h-screen">
+      <!-- 1. 未登录状态（保持居中登录框） -->
       <div
         v-if="!currentUser"
-        class="max-w-md mx-auto my-16 bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-2xl"
+        class="max-w-md mx-auto my-16 bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-2xl self-center"
       >
         <h1 class="text-2xl font-bold text-amber-500 text-center mb-6">
           ☢️ 废土扫荒者 - 登录页面
@@ -82,520 +82,648 @@
         </form>
       </div>
 
-      <!-- 2. 已登录状态 -->
-      <div v-else class="space-y-4">
-        <!-- 顶部状态栏 -->
-        <header
-          class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3"
+      <!-- 2. 已登录状态：左侧导航 + 右侧内容区 -->
+      <div v-else class="flex w-full min-h-screen">
+        <!-- 左侧侧边导航栏 -->
+        <aside
+          class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0"
         >
-          <div class="flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-              <h1 class="text-xl font-bold text-amber-500 flex items-center">
-                ☢️ 废土扫荒者<span
-                  class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded ml-2"
-                  >摸鱼版</span
-                >
-              </h1>
-            </div>
-            <div class="flex items-center space-x-6">
-              <div class="text-right">
-                <div class="text-xs text-gray-400">
-                  用户:
-                  <span class="text-amber-400 font-bold"
-                    >{{ currentUser }}</span
-                  >
-                </div>
-                <div class="space-x-2">
-                  <button
-                    @click="showPasswordModal = true"
-                    class="text-[10px] text-amber-400 hover:underline"
-                  >
-                    修改密码
-                  </button>
-                  <button
-                    @click="logout"
-                    class="text-[10px] text-red-400 hover:underline"
-                  >
-                    退出登录
-                  </button>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-xs text-gray-400">实时在线</div>
-                <div class="text-lg font-bold text-emerald-400">
-                  🟢 {{ onlineCount }} 人
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-xs text-gray-400">瓶盖 (金币)</div>
-                <div class="text-lg font-bold text-yellow-400">
-                  💰 {{ gameData.caps }}
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-xs text-gray-400">综合战力</div>
-                <div class="text-lg font-bold text-red-400">
-                  ⚔️ {{ totalPower }}
-                </div>
-              </div>
-              <button
-                @click="showVipModal = true"
-                class="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-gray-900 font-bold px-3 py-1.5 rounded-lg text-sm transition"
-              >
-                {{ gameData.isVip ? '👑 VIP 特权中' : '🔑 激活特权卡' }}
-              </button>
+          <div class="p-4 border-b border-gray-700">
+            <h2 class="text-base font-bold text-amber-500 flex items-center">
+              ☢️ 废土控制台
+            </h2>
+            <div class="text-[10px] text-gray-400 mt-1">
+              当前用户: <span class="text-amber-400">{{ currentUser }}</span>
             </div>
           </div>
 
-          <!-- 等级与经验条显示栏 -->
-          <div
-            class="bg-gray-900/80 p-2.5 rounded-lg border border-gray-700/60"
-          >
-            <div class="flex justify-between items-center mb-1 text-xs">
-              <span class="font-bold text-amber-400 flex items-center">
-                ⭐ 等级: Lv.{{ gameData.level }}
-                <span class="text-[10px] text-gray-400 font-normal ml-2"
-                  >(最大容量: {{ gameData.maxCrates }} 格)</span
-                >
-              </span>
-              <span class="text-gray-400">
-                {{ gameData.level >= 9999 ? '已达最大等级' : `${gameData.exp} /
-                ${maxExpForCurrentLevel} EXP` }}
-              </span>
-            </div>
-            <div
-              class="w-full bg-gray-800 h-2 rounded-full overflow-hidden border border-gray-700"
+          <nav class="flex-1 p-4 space-y-2 text-sm">
+            <!-- 第一栏：主页 (独立) -->
+            <button
+              @click="currentTab = 'home'"
+              :class="currentTab === 'home' ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 font-bold' : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'"
+              class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg border border-transparent transition text-left"
             >
-              <div
-                class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full transition-all duration-300"
-                :style="{ width: expPercentage + '%' }"
-              ></div>
-            </div>
-          </div>
-        </header>
+              <span>🏠</span>
+              <span>主页</span>
+            </button>
 
-        <!-- 内容区域网格分栏 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- 左侧操控栏与已穿装备 -->
-          <div class="space-y-4">
-            <!-- 废土探索小队卡片 -->
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-              <h2
-                class="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider"
+            <!-- 第二栏：角色导航 (带下拉折叠) -->
+            <div class="space-y-1">
+              <button
+                @click="toggleMenu('character')"
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700/50 hover:text-white transition text-left"
               >
-                废土探索小队
-              </h2>
-              <div class="flex flex-col items-center py-4">
-                <div class="text-4xl mb-2">{{ isExploring ? '🏃‍♂️' : '☕' }}</div>
-                <div class="text-sm font-medium mb-1 text-gray-200">
-                  {{ exploreStatusText }}
+                <div class="flex items-center space-x-3">
+                  <span>🛡️</span>
+                  <span>角色</span>
                 </div>
-                <!-- 显示剩余探索包数与当前倒计时 -->
-                <div
-                  v-if="isExploring"
-                  class="text-xs text-amber-400 mb-3 font-mono"
+                <span class="text-xs text-gray-500"
+                  >{{ openMenus.character ? '▼' : '▶' }}</span
                 >
-                  剩余包数:
-                  <span class="font-bold text-lg">{{ remainingCount }}</span> /
-                  200 包 ({{ searchProgressTimer }}s)
-                </div>
-                <div v-else class="text-xs text-gray-500 mb-3">
-                  点击下方按钮开始 200 包挂机探索
-                </div>
+              </button>
 
+              <!-- 下拉子菜单：装备、强化 -->
+              <div v-show="openMenus.character" class="pl-6 space-y-1">
                 <button
-                  @click="toggleExplore"
-                  :class="isExploring ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'"
-                  class="w-full py-2.5 rounded-lg font-bold transition shadow-lg text-white"
+                  @click="currentTab = 'equipment'"
+                  :class="currentTab === 'equipment' ? 'bg-amber-500/20 text-amber-400 font-bold' : 'text-gray-400 hover:text-white hover:bg-gray-700/30'"
+                  class="w-full text-left px-3 py-2 rounded-md text-xs transition"
                 >
-                  {{ isExploring ? '召回小队 (中止挂机)' :
-                  '派遣小队探索(自动挂200 包)' }}
+                  ⚔️ 装备
+                </button>
+                <button
+                  @click="currentTab = 'strengthen'"
+                  :class="currentTab === 'strengthen' ? 'bg-amber-500/20 text-amber-400 font-bold' : 'text-gray-400 hover:text-white hover:bg-gray-700/30'"
+                  class="w-full text-left px-3 py-2 rounded-md text-xs transition"
+                >
+                  🔨 强化
                 </button>
               </div>
             </div>
 
-            <!-- 6大装备槽位循环展示 -->
-            <div class="space-y-2">
-              <div
-                v-for="(slotNameText, slotKey) in { weapon: '武器', head: '头部', armor: '护甲', hand: '手部', leg: '腿部', ring: '戒指' }"
-                :key="slotKey"
-                class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-700/60 flex items-center justify-between"
+            <!-- 第三栏：交易导航 (带下拉折叠) -->
+            <div class="space-y-1">
+              <button
+                @click="toggleMenu('trade')"
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700/50 hover:text-white transition text-left"
               >
                 <div class="flex items-center space-x-3">
-                  <div
-                    class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-700"
+                  <span>⚖️</span>
+                  <span>交易</span>
+                </div>
+                <span class="text-xs text-gray-500"
+                  >{{ openMenus.trade ? '▼' : '▶' }}</span
+                >
+              </button>
+
+              <!-- 下拉子菜单：商店 -->
+              <div v-show="openMenus.trade" class="pl-6 space-y-1">
+                <button
+                  @click="currentTab = 'shop'"
+                  :class="currentTab === 'shop' ? 'bg-amber-500/20 text-amber-400 font-bold' : 'text-gray-400 hover:text-white hover:bg-gray-700/30'"
+                  class="w-full text-left px-3 py-2 rounded-md text-xs transition"
+                >
+                  🛒 商店
+                </button>
+              </div>
+            </div>
+          </nav>
+
+          <!-- 侧边栏底部：退出/修改密码 -->
+          <div class="p-4 border-t border-gray-700 space-y-2">
+            <button
+              @click="showPasswordModal = true"
+              class="w-full bg-gray-700 hover:bg-gray-600 text-amber-400 text-xs py-2 rounded-lg transition text-center"
+            >
+              修改密码
+            </button>
+            <button
+              @click="logout"
+              class="w-full bg-red-900/40 hover:bg-red-900/70 text-red-300 text-xs py-2 rounded-lg transition text-center border border-red-800/50"
+            >
+              退出登录
+            </button>
+          </div>
+        </aside>
+
+        <!-- 右侧主内容切换区 -->
+        <main class="flex-1 p-6 overflow-y-auto max-w-5xl mx-auto space-y-4">
+          <!-- 顶部状态栏（在所有子页面都可以通用展示） -->
+          <header
+            class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3"
+          >
+            <div class="flex justify-between items-center">
+              <div class="flex items-center space-x-4">
+                <h1 class="text-xl font-bold text-amber-500 flex items-center">
+                  ☢️ 废土扫荒者<span
+                    class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded ml-2"
+                    >摸鱼版</span
                   >
-                    {{ gameData.equipment[slotKey] ?
-                    gameData.equipment[slotKey].icon : (slotKey === 'weapon' ?
-                    '⚔️' : slotKey === 'head' ? '🪖' : slotKey === 'armor' ?
-                    '🛡️' : slotKey === 'hand' ? '🥊' : slotKey === 'leg' ? '🦿'
-                    : '💍') }}
+                </h1>
+              </div>
+              <div class="flex items-center space-x-6">
+                <div class="text-right">
+                  <div class="text-xs text-gray-400">实时在线</div>
+                  <div class="text-lg font-bold text-emerald-400">
+                    🟢 {{ onlineCount }} 人
                   </div>
-                  <div>
-                    <div class="text-[10px] text-gray-400">
-                      {{ slotNameText }}
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-gray-400">瓶盖 (金币)</div>
+                  <div class="text-lg font-bold text-yellow-400">
+                    💰 {{ gameData.caps }}
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-gray-400">综合战力</div>
+                  <div class="text-lg font-bold text-red-400">
+                    ⚔️ {{ totalPower }}
+                  </div>
+                </div>
+                <button
+                  @click="showVipModal = true"
+                  class="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-gray-900 font-bold px-3 py-1.5 rounded-lg text-sm transition"
+                >
+                  {{ gameData.isVip ? '👑 VIP 特权中' : '🔑 激活特权卡' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 等级与经验条显示栏 -->
+            <div
+              class="bg-gray-900/80 p-2.5 rounded-lg border border-gray-700/60"
+            >
+              <div class="flex justify-between items-center mb-1 text-xs">
+                <span class="font-bold text-amber-400 flex items-center">
+                  ⭐ 等级: Lv.{{ gameData.level }}
+                  <span class="text-[10px] text-gray-400 font-normal ml-2"
+                    >(最大容量: {{ gameData.maxCrates }} 格)</span
+                  >
+                </span>
+                <span class="text-gray-400">
+                  {{ gameData.level >= 9999 ? '已达最大等级' : `${gameData.exp}
+                  / ${maxExpForCurrentLevel} EXP` }}
+                </span>
+              </div>
+              <div
+                class="w-full bg-gray-800 h-2 rounded-full overflow-hidden border border-gray-700"
+              >
+                <div
+                  class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full transition-all duration-300"
+                  :style="{ width: expPercentage + '%' }"
+                ></div>
+              </div>
+            </div>
+          </header>
+
+          <!-- ==================== Tab 1: 主页内容 ==================== -->
+          <div v-if="currentTab === 'home'" class="space-y-4">
+            <!-- 内容区域网格分栏 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- 左侧操控栏与已穿装备 -->
+              <div class="space-y-4">
+                <!-- 废土探索小队卡片 -->
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                  <h2
+                    class="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider"
+                  >
+                    废土探索小队
+                  </h2>
+                  <div class="flex flex-col items-center py-4">
+                    <div class="text-4xl mb-2">
+                      {{ isExploring ? '🏃‍♂️' : '☕' }}
                     </div>
-                    <div class="text-xs font-bold text-gray-200">
-                      {{ gameData.equipment[slotKey] ?
-                      gameData.equipment[slotKey].name : '未装备' }}
+                    <div class="text-sm font-medium mb-1 text-gray-200">
+                      {{ exploreStatusText }}
                     </div>
                     <div
-                      v-if="gameData.equipment[slotKey]"
-                      class="text-[9px] text-amber-400 font-semibold"
+                      v-if="isExploring"
+                      class="text-xs text-amber-400 mb-3 font-mono"
                     >
-                      战力 +{{ gameData.equipment[slotKey].power }}
-                      <span v-if="gameData.equipment[slotKey].setName">
-                        | {{ gameData.equipment[slotKey].setName === 'wasteland'
-                        ? '废土套' : gameData.equipment[slotKey].setName ===
-                        'powerArmor' ? '动力套' : '黑客套' }}
-                      </span>
-                      <span v-else class="text-gray-400"> | 独立武器</span>
+                      剩余包数:
+                      <span class="font-bold text-lg"
+                        >{{ remainingCount }}</span
+                      >
+                      / 200 包 ({{ searchProgressTimer }}s)
                     </div>
-                  </div>
-                </div>
-                <button
-                  v-if="gameData.equipment[slotKey]"
-                  @click="unequipItem(slotKey)"
-                  class="bg-gray-700 hover:bg-red-600/80 text-[10px] px-2 py-1 rounded transition text-gray-200"
-                >
-                  脱下
-                </button>
-              </div>
-            </div>
-
-            <!-- 套装激活状态提示 -->
-            <div
-              v-if="activeSetNames.length > 0"
-              class="bg-amber-500/10 border border-amber-500/40 p-2.5 rounded-lg text-xs text-amber-300"
-            >
-              ✨ **已激活套装效果**：
-              <span
-                v-for="sName in activeSetNames"
-                :key="sName"
-                class="block font-bold mt-0.5"
-                >🔥 {{ sName }} (4件套额外战力加成已生效)</span
-              >
-            </div>
-          </div>
-
-          <!-- 右侧包裹与战利品区 -->
-          <div class="md:col-span-2 space-y-4">
-            <!-- 废土遗留包裹区 -->
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-              <div class="flex justify-between items-center mb-3">
-                <h2
-                  class="text-sm font-bold text-gray-400 uppercase tracking-wider"
-                >
-                  废土遗留包裹 ({{ gameData.crates.length }}/{{
-                  gameData.maxCrates }})
-                </h2>
-                <button
-                  @click="openAllCrates"
-                  :disabled="gameData.crates.length === 0"
-                  class="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-xs px-3 py-1.5 rounded font-bold transition text-white"
-                >
-                  一键开启全部
-                </button>
-              </div>
-
-              <!-- 滚动展示区域（固定高度为两行，超出直接内部滚动，不撑开页面） -->
-              <div
-                class="h-[195px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
-              >
-                <div
-                  class="grid grid-cols-4 sm:grid-cols-5 gap-2 min-h-[100px]"
-                >
-                  <div
-                    v-for="(crate, index) in gameData.crates"
-                    :key="crate.id"
-                    @click="openCrate(index)"
-                    class="bg-gray-800 border-2 border-amber-500/40 hover:border-amber-400 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition transform hover:scale-105 active:scale-95 group h-20"
-                  >
-                    <div class="text-2xl group-hover:animate-bounce">📦</div>
-                    <div class="text-[10px] text-amber-400 mt-1 font-bold">
-                      点击开启
+                    <div v-else class="text-xs text-gray-500 mb-3">
+                      点击下方按钮开始 200 包挂机探索
                     </div>
-                  </div>
-                  <div
-                    v-if="gameData.crates.length === 0"
-                    class="col-span-full flex items-center justify-center text-gray-500 text-sm py-8"
-                  >
-                    小队搜索中，包裹将自动放入此处...
+
+                    <button
+                      @click="toggleExplore"
+                      :class="isExploring ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'"
+                      class="w-full py-2.5 rounded-lg font-bold transition shadow-lg text-white"
+                    >
+                      {{ isExploring ? '召回小队 (中止挂机)' :
+                      '派遣小队探索(自动挂200 包)' }}
+                    </button>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <!-- 背包战利品区 -->
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-              <div
-                class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-2 mb-3"
-              >
-                <div class="flex items-center space-x-3">
-                  <h2
-                    class="text-sm font-bold text-gray-400 uppercase tracking-wider"
-                  >
-                    背包战利品 ({{ gameData.inventory.length }})
-                  </h2>
-                  <button
-                    @click="toggleInventorySort"
-                    class="flex items-center space-x-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 text-xs px-2.5 py-1 rounded transition text-amber-400"
-                  >
-                    <span>品质排序</span>
-                    <span
-                      v-if="inventorySortType === 'desc'"
-                      class="text-amber-500 font-bold"
-                      >▼</span
-                    >
-                    <span
-                      v-else-if="inventorySortType === 'asc'"
-                      class="text-amber-500 font-bold"
-                      >▲</span
-                    >
-                    <span v-else class="text-gray-500 font-normal">--</span>
-                  </button>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2 text-xs">
-                  <!-- 6种品质全选/勾选框 -->
+                <!-- 6大装备槽位循环展示 -->
+                <div class="space-y-2">
                   <div
-                    class="flex items-center space-x-2 bg-gray-900 px-2 py-1 rounded border border-gray-700/80"
+                    v-for="(slotNameText, slotKey) in { weapon: '武器', head: '头部', armor: '护甲', hand: '手部', leg: '腿部', ring: '戒指' }"
+                    :key="slotKey"
+                    class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-700/60 flex items-center justify-between"
                   >
-                    <label
-                      class="flex items-center space-x-1 cursor-pointer text-gray-300 hover:text-white"
-                    >
-                      <input
-                        type="checkbox"
-                        value="common"
-                        v-model="selectedSellRarities"
-                        class="rounded accent-amber-500"
-                      />
-                      <span>普通</span>
-                    </label>
-                    <label
-                      class="flex items-center space-x-1 cursor-pointer text-green-400 hover:text-green-300"
-                    >
-                      <input
-                        type="checkbox"
-                        value="uncommon"
-                        v-model="selectedSellRarities"
-                        class="rounded accent-amber-500"
-                      />
-                      <span>罕见</span>
-                    </label>
-                    <label
-                      class="flex items-center space-x-1 cursor-pointer text-blue-400 hover:text-blue-300"
-                    >
-                      <input
-                        type="checkbox"
-                        value="rare"
-                        v-model="selectedSellRarities"
-                        class="rounded accent-amber-500"
-                      />
-                      <span>稀有</span>
-                    </label>
-                    <label
-                      class="flex items-center space-x-1 cursor-pointer text-purple-400 hover:text-purple-300"
-                    >
-                      <input
-                        type="checkbox"
-                        value="epic"
-                        v-model="selectedSellRarities"
-                        class="rounded accent-amber-500"
-                      />
-                      <span>史诗</span>
-                    </label>
-                    <label
-                      class="flex items-center space-x-1 cursor-pointer text-yellow-400 hover:text-yellow-300"
-                    >
-                      <input
-                        type="checkbox"
-                        value="legendary"
-                        v-model="selectedSellRarities"
-                        class="rounded accent-amber-500"
-                      />
-                      <span>传说</span>
-                    </label>
-                    <label
-                      class="flex items-center space-x-1 cursor-pointer text-red-400 hover:text-red-300"
-                    >
-                      <input
-                        type="checkbox"
-                        value="mythic"
-                        v-model="selectedSellRarities"
-                        class="rounded accent-amber-500"
-                      />
-                      <span>神话</span>
-                    </label>
-                  </div>
-
-                  <button
-                    @click="sellTrash"
-                    :disabled="gameData.inventory.length === 0"
-                    class="bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-xs px-3 py-1.5 rounded font-bold transition whitespace-nowrap text-white"
-                  >
-                    一键出售勾选
-                  </button>
-                </div>
-              </div>
-
-              <div
-                class="max-h-[300px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
-              >
-                <div
-                  class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
-                >
-                  <div
-                    v-for="item in sortedInventory"
-                    :key="item.id"
-                    :class="'rarity-' + item.rarity"
-                    class="bg-gray-800 border-2 rounded-lg p-3 flex flex-col justify-between relative group hover:brightness-110 transition min-w-0"
-                  >
-                    <div>
-                      <div class="flex justify-between items-start">
-                        <span class="text-2xl">{{ item.icon }}</span>
-                        <span
-                          class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-gray-900/60 text-gray-300"
+                    <div class="flex items-center space-x-3">
+                      <div
+                        class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-700"
+                      >
+                        {{ gameData.equipment[slotKey] ?
+                        gameData.equipment[slotKey].icon : (slotKey === 'weapon'
+                        ? '⚔️' : slotKey === 'head' ? '🪖' : slotKey === 'armor'
+                        ? '🛡️' : slotKey === 'hand' ? '🥊' : slotKey === 'leg' ?
+                        '🦿' : '💍') }}
+                      </div>
+                      <div>
+                        <div class="text-[10px] text-gray-400">
+                          {{ slotNameText }}
+                        </div>
+                        <div class="text-xs font-bold text-gray-200">
+                          {{ gameData.equipment[slotKey] ?
+                          gameData.equipment[slotKey].name : '未装备' }}
+                        </div>
+                        <div
+                          v-if="gameData.equipment[slotKey]"
+                          class="text-[9px] text-amber-400 font-semibold"
                         >
-                          {{ getSlotLabel(item.type) }}
-                        </span>
+                          战力 +{{ gameData.equipment[slotKey].power }}
+                          <span v-if="gameData.equipment[slotKey].setName">
+                            | {{ gameData.equipment[slotKey].setName ===
+                            'wasteland' ? '废土套' :
+                            gameData.equipment[slotKey].setName === 'powerArmor'
+                            ? '动力套' : '黑客套' }}
+                          </span>
+                          <span v-else class="text-gray-400"> | 独立武器</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      v-if="gameData.equipment[slotKey]"
+                      @click="unequipItem(slotKey)"
+                      class="bg-gray-700 hover:bg-red-600/80 text-[10px] px-2 py-1 rounded transition text-gray-200"
+                    >
+                      脱下
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 套装激活状态提示 -->
+                <div
+                  v-if="activeSetNames.length > 0"
+                  class="bg-amber-500/10 border border-amber-500/40 p-2.5 rounded-lg text-xs text-amber-300"
+                >
+                  ✨ **已激活套装效果**：
+                  <span
+                    v-for="sName in activeSetNames"
+                    :key="sName"
+                    class="block font-bold mt-0.5"
+                    >🔥 {{ sName }} (4件套额外战力加成已生效)</span
+                  >
+                </div>
+              </div>
+
+              <!-- 右侧包裹与战利品区 -->
+              <div class="md:col-span-2 space-y-4">
+                <!-- 废土遗留包裹区（已限制高度，防止高度扩张） -->
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                  <div class="flex justify-between items-center mb-3">
+                    <h2
+                      class="text-sm font-bold text-gray-400 uppercase tracking-wider"
+                    >
+                      废土遗留包裹 ({{ gameData.crates.length }}/{{
+                      gameData.maxCrates }})
+                    </h2>
+                    <button
+                      @click="openAllCrates"
+                      :disabled="gameData.crates.length === 0"
+                      class="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-xs px-3 py-1.5 rounded font-bold transition text-white"
+                    >
+                      一键开启全部
+                    </button>
+                  </div>
+
+                  <!-- 滚动展示区域（固定高防止抖动） -->
+                  <div
+                    class="h-[195px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
+                  >
+                    <div class="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                      <div
+                        v-for="(crate, index) in gameData.crates"
+                        :key="crate.id"
+                        @click="openCrate(index)"
+                        class="bg-gray-800 border-2 border-amber-500/40 hover:border-amber-400 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition transform hover:scale-105 active:scale-95 group h-20"
+                      >
+                        <div class="text-2xl group-hover:animate-bounce">
+                          📦
+                        </div>
+                        <div class="text-[10px] text-amber-400 mt-1 font-bold">
+                          点击开启
+                        </div>
                       </div>
                       <div
-                        class="font-bold text-sm mt-2 text-gray-100 truncate"
-                        :title="item.name"
+                        v-if="gameData.crates.length === 0"
+                        class="col-span-full flex items-center justify-center text-gray-500 text-sm py-12"
                       >
-                        {{ item.name }}
-                      </div>
-                      <div class="text-xs text-amber-400 font-semibold mt-1">
-                        战力 +{{ item.power }}
+                        小队搜索中，包裹将自动放入此处...
                       </div>
                     </div>
+                  </div>
+                </div>
 
-                    <div
-                      class="flex space-x-2 mt-3 pt-2 border-t border-gray-700/50"
-                    >
-                      <button
-                        @click.stop="equipItem(item)"
-                        class="flex-1 bg-blue-600 hover:bg-blue-500 text-xs py-1 rounded font-bold transition text-white"
+                <!-- 背包战利品区 -->
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                  <div
+                    class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-2 mb-3"
+                  >
+                    <div class="flex items-center space-x-3">
+                      <h2
+                        class="text-sm font-bold text-gray-400 uppercase tracking-wider"
                       >
-                        装备
+                        背包战利品 ({{ gameData.inventory.length }})
+                      </h2>
+                      <button
+                        @click="toggleInventorySort"
+                        class="flex items-center space-x-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 text-xs px-2.5 py-1 rounded transition text-amber-400"
+                      >
+                        <span>品质排序</span>
+                        <span
+                          v-if="inventorySortType === 'desc'"
+                          class="text-amber-500 font-bold"
+                          >▼</span
+                        >
+                        <span
+                          v-else-if="inventorySortType === 'asc'"
+                          class="text-amber-500 font-bold"
+                          >▲</span
+                        >
+                        <span v-else class="text-gray-500 font-normal">--</span>
                       </button>
-                      <button
-                        @click.stop="sellItem(item)"
-                        class="flex-1 bg-gray-700 hover:bg-amber-600 text-xs py-1 rounded transition flex items-center justify-center space-x-1 text-gray-200"
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                      <div
+                        class="flex items-center space-x-2 bg-gray-900 px-2 py-1 rounded border border-gray-700/80"
                       >
-                        <span>💰</span>
-                        <span>{{ item.price }}</span>
+                        <label
+                          class="flex items-center space-x-1 cursor-pointer text-gray-300 hover:text-white"
+                        >
+                          <input
+                            type="checkbox"
+                            value="common"
+                            v-model="selectedSellRarities"
+                            class="rounded accent-amber-500"
+                          />
+                          <span>普通</span>
+                        </label>
+                        <label
+                          class="flex items-center space-x-1 cursor-pointer text-green-400 hover:text-green-300"
+                        >
+                          <input
+                            type="checkbox"
+                            value="uncommon"
+                            v-model="selectedSellRarities"
+                            class="rounded accent-amber-500"
+                          />
+                          <span>罕见</span>
+                        </label>
+                        <label
+                          class="flex items-center space-x-1 cursor-pointer text-blue-400 hover:text-blue-300"
+                        >
+                          <input
+                            type="checkbox"
+                            value="rare"
+                            v-model="selectedSellRarities"
+                            class="rounded accent-amber-500"
+                          />
+                          <span>稀有</span>
+                        </label>
+                        <label
+                          class="flex items-center space-x-1 cursor-pointer text-purple-400 hover:text-purple-300"
+                        >
+                          <input
+                            type="checkbox"
+                            value="epic"
+                            v-model="selectedSellRarities"
+                            class="rounded accent-amber-500"
+                          />
+                          <span>史诗</span>
+                        </label>
+                        <label
+                          class="flex items-center space-x-1 cursor-pointer text-yellow-400 hover:text-yellow-300"
+                        >
+                          <input
+                            type="checkbox"
+                            value="legendary"
+                            v-model="selectedSellRarities"
+                            class="rounded accent-amber-500"
+                          />
+                          <span>传说</span>
+                        </label>
+                        <label
+                          class="flex items-center space-x-1 cursor-pointer text-red-400 hover:text-red-300"
+                        >
+                          <input
+                            type="checkbox"
+                            value="mythic"
+                            v-model="selectedSellRarities"
+                            class="rounded accent-amber-500"
+                          />
+                          <span>神话</span>
+                        </label>
+                      </div>
+
+                      <button
+                        @click="sellTrash"
+                        :disabled="gameData.inventory.length === 0"
+                        class="bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-xs px-3 py-1.5 rounded font-bold transition whitespace-nowrap text-white"
+                      >
+                        一键出售勾选
                       </button>
                     </div>
                   </div>
+
                   <div
-                    v-if="gameData.inventory.length === 0"
-                    class="col-span-full flex items-center justify-center text-gray-500 text-sm py-12"
+                    class="max-h-[300px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
                   >
-                    背包空空如也，快去开启包裹获取装备吧！
+                    <div
+                      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+                    >
+                      <div
+                        v-for="item in sortedInventory"
+                        :key="item.id"
+                        :class="'rarity-' + item.rarity"
+                        class="bg-gray-800 border-2 rounded-lg p-3 flex flex-col justify-between relative group hover:brightness-110 transition min-w-0"
+                      >
+                        <div>
+                          <div class="flex justify-between items-start">
+                            <span class="text-2xl">{{ item.icon }}</span>
+                            <span
+                              class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-gray-900/60 text-gray-300"
+                            >
+                              {{ getSlotLabel(item.type) }}
+                            </span>
+                          </div>
+                          <div
+                            class="font-bold text-sm mt-2 text-gray-100 truncate"
+                            :title="item.name"
+                          >
+                            {{ item.name }}
+                          </div>
+                          <div
+                            class="text-xs text-amber-400 font-semibold mt-1"
+                          >
+                            战力 +{{ item.power }}
+                          </div>
+                        </div>
+
+                        <div
+                          class="flex space-x-2 mt-3 pt-2 border-t border-gray-700/50"
+                        >
+                          <button
+                            @click.stop="equipItem(item)"
+                            class="flex-1 bg-blue-600 hover:bg-blue-500 text-xs py-1 rounded font-bold transition text-white"
+                          >
+                            装备
+                          </button>
+                          <button
+                            @click.stop="sellItem(item)"
+                            class="flex-1 bg-gray-700 hover:bg-amber-600 text-xs py-1 rounded transition flex items-center justify-center space-x-1 text-gray-200"
+                          >
+                            <span>💰</span>
+                            <span>{{ item.price }}</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div
+                        v-if="gameData.inventory.length === 0"
+                        class="col-span-full flex items-center justify-center text-gray-500 text-sm py-12"
+                      >
+                        背包空空如也，快去开启包裹获取装备吧！
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- 修改密码弹窗 -->
-        <div
-          v-if="showPasswordModal"
-          class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
-        >
+          <!-- ==================== Tab 2: 角色 - 装备 (暂无内容) ==================== -->
           <div
-            class="bg-gray-800 border border-gray-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4"
+            v-if="currentTab === 'equipment'"
+            class="bg-gray-800 p-8 rounded-xl border border-gray-700 text-center py-24"
           >
-            <h3 class="text-lg font-bold text-amber-500 flex items-center">
-              🔐 修改账户密码
+            <div class="text-4xl mb-3">⚔️</div>
+            <h3 class="text-lg font-bold text-amber-500 mb-1">
+              角色装备管理页面
             </h3>
+            <p class="text-xs text-gray-400">此页面暂未开放内容，敬请期待...</p>
+          </div>
 
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">旧密码</label>
-              <input
-                v-model.trim="passwordForm.oldPassword"
-                type="password"
-                placeholder="请输入当前密码"
-                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
-              />
-            </div>
+          <!-- ==================== Tab 3: 角色 - 强化 (暂无内容) ==================== -->
+          <div
+            v-if="currentTab === 'strengthen'"
+            class="bg-gray-800 p-8 rounded-xl border border-gray-700 text-center py-24"
+          >
+            <div class="text-4xl mb-3">🔨</div>
+            <h3 class="text-lg font-bold text-amber-500 mb-1">
+              装备强化与改造页面
+            </h3>
+            <p class="text-xs text-gray-400">此页面暂未开放内容，敬请期待...</p>
+          </div>
 
-            <div>
-              <label class="block text-xs text-gray-400 mb-1"
-                >新密码 (6-16位，须含字母和数字)</label
-              >
-              <input
-                v-model.trim="passwordForm.newPassword"
-                type="password"
-                maxlength="20"
-                placeholder="请输入新密码"
-                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
-              />
-            </div>
+          <!-- ==================== Tab 4: 交易 - 商店 (暂无内容) ==================== -->
+          <div
+            v-if="currentTab === 'shop'"
+            class="bg-gray-800 p-8 rounded-xl border border-gray-700 text-center py-24"
+          >
+            <div class="text-4xl mb-3">🛒</div>
+            <h3 class="text-lg font-bold text-amber-500 mb-1">
+              废土黑市商店页面
+            </h3>
+            <p class="text-xs text-gray-400">此页面暂未开放内容，敬请期待...</p>
+          </div>
+        </main>
+      </div>
 
-            <div
-              v-if="passwordError"
-              class="text-xs text-red-400 bg-red-900/30 p-2 rounded border border-red-800/50"
+      <!-- 修改密码弹窗 -->
+      <div
+        v-if="showPasswordModal"
+        class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
+      >
+        <div
+          class="bg-gray-800 border border-gray-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4"
+        >
+          <h3 class="text-lg font-bold text-amber-500 flex items-center">
+            🔐 修改账户密码
+          </h3>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">旧密码</label>
+            <input
+              v-model.trim="passwordForm.oldPassword"
+              type="password"
+              placeholder="请输入当前密码"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1"
+              >新密码 (6-16位，须含字母和数字)</label
             >
-              ⚠️ {{ passwordError }}
-            </div>
+            <input
+              v-model.trim="passwordForm.newPassword"
+              type="password"
+              maxlength="20"
+              placeholder="请输入新密码"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            />
+          </div>
 
-            <div class="flex justify-end space-x-3 pt-2">
-              <button
-                @click="showPasswordModal = false"
-                class="px-4 py-2 text-xs text-gray-400 hover:text-white"
-              >
-                取消
-              </button>
-              <button
-                @click="changePassword"
-                class="bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold text-xs px-4 py-2 rounded-lg"
-              >
-                确认修改
-              </button>
-            </div>
+          <div
+            v-if="passwordError"
+            class="text-xs text-red-400 bg-red-900/30 p-2 rounded border border-red-800/50"
+          >
+            ⚠️ {{ passwordError }}
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-2">
+            <button
+              @click="showPasswordModal = false"
+              class="px-4 py-2 text-xs text-gray-400 hover:text-white"
+            >
+              取消
+            </button>
+            <button
+              @click="changePassword"
+              class="bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold text-xs px-4 py-2 rounded-lg"
+            >
+              确认修改
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- VIP 兑换弹窗 -->
+      <!-- VIP 兑换弹窗 -->
+      <div
+        v-if="showVipModal"
+        class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
+      >
         <div
-          v-if="showVipModal"
-          class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
+          class="bg-gray-800 border border-gray-700 rounded-2xl p-6 max-w-md w-full shadow-2xl"
         >
-          <div
-            class="bg-gray-800 border border-gray-700 rounded-2xl p-6 max-w-md w-full shadow-2xl"
-          >
-            <h3 class="text-lg font-bold text-amber-500 mb-2 flex items-center">
-              🔑 激活 VIP 挂机特权
-            </h3>
-            <p class="text-xs text-gray-400 mb-4">输入卡密解锁更多权限！</p>
+          <h3 class="text-lg font-bold text-amber-500 mb-2 flex items-center">
+            🔑 激活 VIP 挂机特权
+          </h3>
+          <p class="text-xs text-gray-400 mb-4">输入卡密解锁更多权限！</p>
 
-            <div class="space-y-3 mb-6">
-              <input
-                v-model="cdkInput"
-                placeholder="请输入 VIP 卡密"
-                maxlength="20"
-                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
-              />
-            </div>
+          <div class="space-y-3 mb-6">
+            <input
+              v-model="cdkInput"
+              placeholder="请输入 VIP 卡密"
+              maxlength="20"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            />
+          </div>
 
-            <div class="flex justify-end space-x-3">
-              <button
-                @click="showVipModal = false"
-                class="px-4 py-2 text-xs text-gray-400 hover:text-white"
-              >
-                取消
-              </button>
-              <button
-                @click="redeemCDK"
-                class="bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold text-xs px-4 py-2 rounded-lg"
-              >
-                确认兑换
-              </button>
-            </div>
+          <div class="flex justify-end space-x-3">
+            <button
+              @click="showVipModal = false"
+              class="px-4 py-2 text-xs text-gray-400 hover:text-white"
+            >
+              取消
+            </button>
+            <button
+              @click="redeemCDK"
+              class="bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold text-xs px-4 py-2 rounded-lg"
+            >
+              确认兑换
+            </button>
           </div>
         </div>
       </div>
@@ -627,6 +755,14 @@
             userId: null,
             form: { username: "", password: "" },
             authError: "",
+
+            // 导航栏控制状态
+            currentTab: "home", // 当前显示的页面：'home' | 'equipment' | 'strengthen' | 'shop'
+            openMenus: {
+              character: true, // 角色下拉是否展开
+              trade: true, // 交易下拉是否展开
+            },
+
             isExploring: false,
             remainingCount: 0,
             searchProgressTimer: 6,
@@ -634,8 +770,8 @@
             exploreTimer: null,
             showVipModal: false,
             showPasswordModal: false,
-            onlineCount: 1, // 默认至少显示自己
-            presenceChannel: null, // 用于管理实时通道
+            onlineCount: 1,
+            presenceChannel: null,
             cdkInput: "",
             inventorySortType: "default",
             passwordForm: { oldPassword: "", newPassword: "" },
@@ -742,7 +878,6 @@
               uncommon: 2,
               common: 1,
             };
-
             let inventoryCopy = [...this.gameData.inventory];
 
             if (this.inventorySortType === "desc") {
@@ -767,11 +902,16 @@
             this.currentUser = sess.username;
             this.userId = sess.userId;
             this.fetchUserData().then(() => {
-              this.initOnlinePresence(); // 👈 确保数据加载完后启动在线状态
+              this.initOnlinePresence();
             });
           }
         },
         methods: {
+          // 切换折叠菜单显示状态
+          toggleMenu(menuKey) {
+            this.openMenus[menuKey] = !this.openMenus[menuKey];
+          },
+
           async handleAuth() {
             this.authError = "";
             const username = this.form.username;
@@ -796,9 +936,7 @@
                   .select("id")
                   .eq("username", username)
                   .maybeSingle();
-                if (existing) {
-                  throw new Error("该账号已被注册！");
-                }
+                if (existing) throw new Error("该账号已被注册！");
 
                 const { data: newUser, error: userError } = await db
                   .from("users")
@@ -843,9 +981,7 @@
                   .eq("password", password)
                   .maybeSingle();
 
-                if (error || !data) {
-                  throw new Error("账号或密码错误！");
-                }
+                if (error || !data) throw new Error("账号或密码错误！");
 
                 this.currentUser = data.username;
                 this.userId = data.id;
@@ -869,10 +1005,8 @@
             const newPwd = this.passwordForm.newPassword;
 
             try {
-              if (!oldPwd || !newPwd) {
+              if (!oldPwd || !newPwd)
                 throw new Error("旧密码和新密码不能为空！");
-              }
-
               if (!/^(?=.*[a-zA-Z])[a-zA-Z0-9]{6,20}$/.test(newPwd)) {
                 throw new Error(
                   "新密码须为 6-20 位字符，且必须包含字母和数字，不能包含符号",
@@ -886,18 +1020,14 @@
                 .eq("password", oldPwd)
                 .maybeSingle();
 
-              if (checkError || !userRecord) {
+              if (checkError || !userRecord)
                 throw new Error("旧密码输入错误！");
-              }
 
               const { error: updateError } = await db
                 .from("users")
                 .update({ password: newPwd })
                 .eq("id", this.userId);
-
-              if (updateError) {
-                throw new Error(updateError.message);
-              }
+              if (updateError) throw new Error(updateError.message);
 
               alert("🎉 密码修改成功！请使用新密码重新登录。");
               this.showPasswordModal = false;
@@ -919,7 +1049,6 @@
 
               if (data) {
                 let rawEq = data.equipment || {};
-
                 this.gameData = {
                   caps: data.caps,
                   level: data.level || 1,
@@ -984,7 +1113,6 @@
           },
           addExp(amount) {
             if (this.gameData.level >= 9999) return;
-
             this.gameData.exp += amount;
             while (
               this.gameData.exp >= this.maxExpForCurrentLevel &&
@@ -995,34 +1123,24 @@
               this.updateMaxCrates();
             }
           },
-          // ... 其他已有方法保持不变
 
           initOnlinePresence() {
             if (!this.currentUser) return;
-
-            // 如果之前有通道，先注销
             if (this.presenceChannel) {
               db.removeChannel(this.presenceChannel);
             }
 
-            // 创建一个名为 'online-players' 的 realtime 房间
             this.presenceChannel = db.channel("online-players", {
-              config: {
-                presence: {
-                  key: this.currentUser, // 用用户名作为唯一标识
-                },
-              },
+              config: { presence: { key: this.currentUser } },
             });
 
             this.presenceChannel
               .on("presence", { event: "sync" }, () => {
                 const state = this.presenceChannel.presenceState();
-                // 统计当前频道内有多少个不同的在线用户
                 this.onlineCount = Object.keys(state).length;
               })
               .subscribe(async (status) => {
                 if (status === "SUBSCRIBED") {
-                  // 成功加入后，向所有人广播自己的在线状态
                   await this.presenceChannel.track({
                     user: this.currentUser,
                     online_at: new Date().toISOString(),
@@ -1033,13 +1151,10 @@
 
           logout() {
             if (this.isExploring) this.toggleExplore();
-
-            // 退出时销毁实时通道
             if (this.presenceChannel) {
               db.removeChannel(this.presenceChannel);
               this.presenceChannel = null;
             }
-
             this.currentUser = null;
             this.userId = null;
             localStorage.removeItem("wasteland_session");
@@ -1054,12 +1169,10 @@
 
               this.exploreInterval = setInterval(() => {
                 this.searchProgressTimer--;
-
                 if (this.searchProgressTimer <= 0) {
                   this.searchProgressTimer = 6;
                   this.addCrate();
                   this.remainingCount--;
-
                   if (this.remainingCount <= 0) {
                     this.stopExplore();
                   }
@@ -1078,31 +1191,22 @@
             if (this.gameData.crates.length >= this.gameData.maxCrates) {
               this.openAllCrates();
             }
-
             this.gameData.crates.push({
               id: Date.now() + Math.random(),
               createdAt: new Date().toISOString(),
             });
-
             this.saveUserData();
           },
           openCrate(index) {
             this.gameData.crates.splice(index, 1);
-
             const rand = Math.random() * 100;
             let rarity = "common";
 
-            if (rand > 99.972) {
-              rarity = "mythic";
-            } else if (rand > 99.7) {
-              rarity = "legendary";
-            } else if (rand > 97.0) {
-              rarity = "epic";
-            } else if (rand > 85.0) {
-              rarity = "rare";
-            } else if (rand > 55.0) {
-              rarity = "uncommon";
-            }
+            if (rand > 99.972) rarity = "mythic";
+            else if (rand > 99.7) rarity = "legendary";
+            else if (rand > 97.0) rarity = "epic";
+            else if (rand > 85.0) rarity = "rare";
+            else if (rand > 55.0) rarity = "uncommon";
 
             const expGained = EXP_REWARDS[rarity] || 10;
             this.addExp(expGained);
@@ -1134,15 +1238,12 @@
             const currentEquipped = this.gameData.equipment[targetType];
 
             this.gameData.inventory.splice(index, 1);
-
             if (currentEquipped) {
               this.gameData.inventory.unshift(currentEquipped);
             }
-
             this.gameData.equipment[targetType] = item;
             this.saveUserData();
           },
-
           unequipItem(type) {
             const itemToUnequip = this.gameData.equipment[type];
             if (!itemToUnequip) return;
@@ -1166,11 +1267,9 @@
               alert("请先至少勾选一种要出售的装备品质！");
               return;
             }
-
             const itemsToSell = this.gameData.inventory.filter((item) =>
               this.selectedSellRarities.includes(item.rarity),
             );
-
             if (itemsToSell.length === 0) {
               alert("背包中没有包含所选品质的装备！");
               return;
@@ -1181,7 +1280,6 @@
               0,
             );
             this.gameData.caps += totalEarned;
-
             this.gameData.inventory = this.gameData.inventory.filter(
               (item) => !this.selectedSellRarities.includes(item.rarity),
             );
