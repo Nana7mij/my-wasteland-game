@@ -442,14 +442,15 @@
                   </div>
                 </div>
 
-                <!-- 背包战利品区 -->
+                <!-- 背包战利品 -->
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                  <!-- 头部控制栏：改用 flex-wrap 并优化间距，避免在中等屏幕下突兀换行和右侧留空 -->
                   <div
-                    class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-2 mb-3"
+                    class="flex flex-wrap justify-between items-center gap-3 mb-3"
                   >
                     <div class="flex items-center space-x-3">
                       <h2
-                        class="text-sm font-bold text-gray-400 uppercase tracking-wider"
+                        class="text-sm font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap"
                       >
                         背包战利品 ({{ gameData.inventory.length }})
                       </h2>
@@ -554,11 +555,12 @@
                     </div>
                   </div>
 
+                  <!-- 下方物品卡片网格：调整响应式列数，让大屏下能排布更多列，填满右侧空间 -->
                   <div
                     class="max-h-[300px] overflow-y-auto pr-1 bg-gray-900 p-3 rounded-lg border border-gray-700/50"
                   >
                     <div
-                      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+                      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
                     >
                       <div
                         v-for="item in sortedInventory"
