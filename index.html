@@ -1288,14 +1288,14 @@
             let rarity = "common";
 
             if (crate && crate.type === "epic_box") {
-              // 极品箱子掉落机制：神话 60%, 传说 30%, 史诗 10%
+              // 极品箱子掉落机制：神话 10%, 传说 30%, 史诗 60%
               const rand = Math.random() * 100;
               if (rand < 60) {
-                rarity = "mythic";
+                rarity = "epic";
               } else if (rand < 90) {
                 rarity = "legendary";
               } else {
-                rarity = "epic";
+                rarity = "mythic";
               }
             } else {
               // 普通箱子原有概率
